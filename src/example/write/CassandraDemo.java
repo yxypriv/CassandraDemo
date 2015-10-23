@@ -1,8 +1,5 @@
 package example.write;
 
-import java.nio.channels.SeekableByteChannel;
-import java.util.List;
-
 import com.datastax.driver.core.BoundStatement;
 import com.datastax.driver.core.Cluster;
 import com.datastax.driver.core.PreparedStatement;
@@ -16,8 +13,7 @@ public class CassandraDemo {
 
 	public CassandraDemo() {
 		cluster = Cluster.builder().addContactPoint("localhost").build();
-		System.out.println(cluster.getConfiguration());
-		// .withPort(9142)
+		System.out.println(cluster.toString());
 		session = cluster.connect();
 	}
 
@@ -35,8 +31,7 @@ public class CassandraDemo {
 
 	public void createTableDemo() {
 		System.out.println("---Creating table----");
-		session.execute("CREATE TABLE demo.songs (" + "id int PRIMARY KEY," + "title text,"
-				+ "album text," + "artist text," + "tags set<text>," + "data blob" + ");");
+		session.execute("CREATE TABLE demo.songs (id int PRIMARY KEY,title text, album text,artist text,tags set<text>,data blob);");
 	}
 
 	public void alterTableDemo() {
@@ -59,16 +54,16 @@ public class CassandraDemo {
 				+ " VALUES (3, 'T3', 't4', 'a3', {'tag1', 'tag3'})");
 	}
 
-	public void selectDemo() {
+	public void selectBySetConstrainDemo() {
 		System.out.println("---Fetching data----");
-		ResultSet rs = session.execute("SELECT * FROM demo.songs");
+		ResultSet rs = session.execute("SELECT * FROM demo.songs WHERE tags CONTAINS 'tag3'");
 		for(Row row : rs) {
 			System.out.println(row.getString("title") + "\t" + row.getString("artist"));
 		}
 	}
 	
-	public void selectBySetConstrainDemo() {
-		System.out.println("---Fetching data----");
+	public void selectDemo() {
+		System.out.println("---Select data by tag----");
 		ResultSet rs = session.execute("SELECT * FROM demo.songs");
 		for(Row row : rs) {
 			System.out.println(row.getString("title") + "\t" + row.getString("artist"));
@@ -91,16 +86,17 @@ public class CassandraDemo {
 		// demo.createKeyspace(key);
 		demo.useKeySpace(key);
 		try {
-			demo.createTableDemo();
-			demo.alterTableDemo();
-			demo.insertDemo();
+//			demo.createTableDemo();
+//			demo.alterTableDemo();
+//			demo.insertDemo();
 			demo.selectDemo();
-			demo.deleteDemo();
-			demo.selectDemo();
+//			demo.selectBySetConstrainDemo();
+//			demo.deleteDemo();
+//			demo.selectDemo();
 		} catch (com.datastax.driver.core.exceptions.AlreadyExistsException e) {
 			e.printStackTrace();
 		} finally {
-			demo.dropTableDemo();
+//			demo.dropTableDemo();
 			demo.close();
 		}
 	}
