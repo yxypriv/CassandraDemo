@@ -59,8 +59,8 @@ public class CassandraConnection {
 	}
 
     public ResultSet execute(Statement statement) {
-        return executeAsync(statement).getUninterruptibly();
-    }
+        return session.execute(statement); 
+	}
 	
     public ResultSetFuture executeAsync(Statement statement) {
         return session.executeAsync(statement);

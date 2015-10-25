@@ -58,9 +58,9 @@ public class CassandraConnectionReuse {
 	}
 	
 	public static void main(String[] args) {
+		accessTest1();
+		accessTest2();
 		accessTest3();
-//		accessTest1();
-//		accessTest2();
 		
 	}
 }
