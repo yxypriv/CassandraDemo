@@ -67,7 +67,7 @@ public class TeacherDAO {
 		try {
 			PreparedStatement ps = conn.prepare(sql);
 			System.out.println(ps);
-			BoundStatement bs = ps.bind(0l, obj.getName(), obj.getTitle(), obj.getCourses());
+			BoundStatement bs = ps.bind(1l , obj.getName(), obj.getTitle(), obj.getCourses());
 			conn.execute(bs);
 		} finally {
 			conn.close();
@@ -100,14 +100,14 @@ public class TeacherDAO {
 		// teacherDao.dropTable();
 		// teacherDao.createTable();
 
-		// Teacher obj = new Teacher();
-		// obj.setName("Ravi");
-		// obj.setTitle("Teacher");
-		// List<Long> course = new ArrayList<Long>();
-		// course.add(1234l);
-		// course.add(5678l);
-		// obj.setCourses(course);
-		// teacherDao.insert(obj);
+		 Teacher obj = new Teacher();
+		 obj.setName("Ravi");
+		 obj.setTitle("Teacher");
+		 List<Long> course = new ArrayList<Long>();
+		 course.add(1234l);
+		 course.add(5678l);
+		 obj.setCourses(course);
+		 teacherDao.insert(obj);
 
 		List<Teacher> selectAll = teacherDao.selectAll();
 		for (Teacher t : selectAll) {

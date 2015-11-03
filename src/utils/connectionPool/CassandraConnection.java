@@ -1,6 +1,11 @@
 package utils.connectionPool;
 
+import java.util.Collection;
+import java.util.List;
+
 import com.datastax.driver.core.Cluster;
+import com.datastax.driver.core.KeyspaceMetadata;
+import com.datastax.driver.core.Metadata;
 import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.RegularStatement;
 import com.datastax.driver.core.ResultSet;
@@ -8,6 +13,7 @@ import com.datastax.driver.core.ResultSetFuture;
 import com.datastax.driver.core.Session;
 import com.datastax.driver.core.SimpleStatement;
 import com.datastax.driver.core.Statement;
+import com.datastax.driver.core.TableMetadata;
 
 public class CassandraConnection {
 	boolean occupied = false;
@@ -26,6 +32,29 @@ public class CassandraConnection {
 		this.keySpace = keySpace;
 		initConnection();
 	}
+	
+	public Collection<TableMetadata> getTables() {
+		return getTables(keySpace);
+	}
+	
+	public Collection<TableMetadata> getTables(String keyspace) {
+		Metadata metadata = cluster.getMetadata();
+		KeyspaceMetadata keySpaceMeta = metadata.getKeyspace(keyspace);
+		Collection<TableMetadata> tables = keySpaceMeta.getTables();
+		return tables;
+	}
+	
+	public TableMetadata getTable(String tableName) {
+		return getTable(keySpace, tableName);
+	}
+	
+	public TableMetadata getTable(String keyspace, String tableName) {
+		Metadata metadata = cluster.getMetadata();
+		KeyspaceMetadata keySpaceMeta = metadata.getKeyspace(keyspace);
+		return keySpaceMeta.getTable(tableName);
+	}
+	
+	
 
 	public CassandraConnection(String url, String keySpace, boolean inPool) {
 		super();
@@ -58,14 +87,14 @@ public class CassandraConnection {
 		return execute(new SimpleStatement(query));
 	}
 
-    public ResultSet execute(Statement statement) {
-        return session.execute(statement); 
+	public ResultSet execute(Statement statement) {
+		return session.execute(statement);
 	}
-	
-    public ResultSetFuture executeAsync(Statement statement) {
-        return session.executeAsync(statement);
-    }
-    
+
+	public ResultSetFuture executeAsync(Statement statement) {
+		return session.executeAsync(statement);
+	}
+
 	public void close() {
 		if (!inPool) {
 			session.close();
@@ -74,6 +103,7 @@ public class CassandraConnection {
 			occupied = false;
 		}
 	}
+
 	/**
 	 * only used by connection pool to force close all connections in it;
 	 */
