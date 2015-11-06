@@ -29,15 +29,40 @@ public class CassandraDAOBuilder {
 	String modelPackageStr = "db.models";
 	String[] knownPaths = { "src/" };
 
-	static Map<String, String> importImplementMapping = new HashMap<String, String>();
-	static Set<String> daoExistingImportSet = new HashSet<String>();
 	static final String ignoreImportPrefix = "java.lang";
 
+	static Map<String, String> importImplementMapping = new HashMap<String, String>();
+	static Map<DataType.Name, String> rowReadingMapping = new HashMap<DataType.Name, String>();
+	static Set<String> daoExistingImportSet = new HashSet<String>();
+	
 	static {
 		importImplementMapping.put("java.util.List", "java.util.ArrayList");
 		importImplementMapping.put("java.util.Set", "java.util.HashSet");
 		importImplementMapping.put("java.util.Map", "java.util.HashMap");
 
+		rowReadingMapping.put(DataType.Name.ASCII, "row.getString");
+		rowReadingMapping.put(DataType.Name.BIGINT, "row.getLong");
+		rowReadingMapping.put(DataType.Name.BLOB, "row.getBytes");
+		rowReadingMapping.put(DataType.Name.BOOLEAN, "row.getBoolean");
+		rowReadingMapping.put(DataType.Name.COUNTER, "row.getLong");
+		rowReadingMapping.put(DataType.Name.DECIMAL, "row.getBigDecimal");
+		rowReadingMapping.put(DataType.Name.DOUBLE, "row.getDouble");
+		rowReadingMapping.put(DataType.Name.FLOAT, "row.getFloat");
+		rowReadingMapping.put(DataType.Name.INET, "row.getInetAddress");
+		rowReadingMapping.put(DataType.Name.INT, "row.getInt");
+		rowReadingMapping.put(DataType.Name.TEXT, "row.getString");
+		rowReadingMapping.put(DataType.Name.TIMESTAMP, "row.getDate");
+		rowReadingMapping.put(DataType.Name.UUID, "row.getUUID");
+		rowReadingMapping.put(DataType.Name.VARCHAR, "row.getString");
+		rowReadingMapping.put(DataType.Name.VARINT, "row.getBigInteger");
+		rowReadingMapping.put(DataType.Name.TIMEUUID, "row.getUUID");
+		rowReadingMapping.put(DataType.Name.LIST, "row.getList");
+		rowReadingMapping.put(DataType.Name.SET, "row.getSet");
+		rowReadingMapping.put(DataType.Name.MAP, "row.getMap");
+		rowReadingMapping.put(DataType.Name.UDT, "row.getUDTValue");
+		rowReadingMapping.put(DataType.Name.TUPLE, "row.getTupleValue");
+		rowReadingMapping.put(DataType.Name.CUSTOM, "row.getBytes");
+		
 		daoExistingImportSet.add("java.util.List");
 		daoExistingImportSet.add("java.util.ArrayList");
 	}
@@ -88,44 +113,109 @@ public class CassandraDAOBuilder {
 				String modelFileName = StringsBuildUtil.toCamelCase(tableName, true);
 				buildModelFile(tableMeta, javaRoot, modelFileName, importSet);
 
-				buildDAOFile(tableMeta, javaRoot, modelFileName, importSet);
+				buildDAOFile(tableMeta, javaRoot, tableName, importSet);
 			}
 		}
 	}
 
-	private void buildDAOFile(TableMetadata tableMeta, File javaRoot, String modelFileName,
+	private void buildDAOFile(TableMetadata tableMeta, File javaRoot, String tableName,
 			Set<String> importSet) {
+		String modelFileName = StringsBuildUtil.toCamelCase(tableName, true);
 		File daosPath = new File(javaRoot, daoPathStr);
 		File outputFile = new File(daosPath, modelFileName + "DAO.java");
-		InputStream templateStream = CassandraDAOBuilder.class.getClassLoader()
-				.getResourceAsStream("template");
 
 		Map<String, String> replacementMap = new HashMap<String, String>();
 		replacementMap.put("PACKAGE", daoPackageStr);
 		replacementMap.put("MODEL_PACKAGE", modelPackageStr);
 		replacementMap.put("MODEL_NAME", modelFileName);
+		replacementMap.put("TABLE_NAME", tableName);
+		replacementMap.put("KEYSPACE", keyspace);
+		replacementMap.put("CREATE_SQL", tableMeta.asCQLQuery().replace(keyspace + "." + tableName,
+				"%s." + tableName));
+
 		
+		// Construct import String
 		List<String> daoImports = new ArrayList<String>(daoExistingImportSet);
 		for (String importStr : importSet) {
-			if (!daoExistingImportSet.contains(importStr))
-				daoImports.add(importStr);
+			// not actually used, skip
+//			if (!daoExistingImportSet.contains(importStr))
+//				daoImports.add(importStr);
 		}
 		Collections.sort(daoImports);
-		StringBuilder importSB = new StringBuilder();
+		StringBuilder tempStringBuilder = new StringBuilder();
 		for (String di : daoImports) {
-			importSB.append(String.format("import %s;\r\n", di));
+			tempStringBuilder.append(String.format("import %s;\r\n", di));
 		}
-		replacementMap.put("IMPORTS", importSB.toString());
+		replacementMap.put("IMPORTS", tempStringBuilder.toString());
 
-		final StringBuilder sb = new StringBuilder();
+		// Construct insert sql
+		List<ColumnMetadata> columns = tableMeta.getColumns();
+		tempStringBuilder = new StringBuilder();
+		tempStringBuilder.append("INSERT INTO %s.").append(tableName).append(" ");
+		tempStringBuilder.append("(");
+		for(ColumnMetadata column : columns) {
+			tempStringBuilder.append(column.getName()).append(", ");
+		}
+		tempStringBuilder.delete(tempStringBuilder.length()-2, tempStringBuilder.length());
+		tempStringBuilder.append(")");
+		tempStringBuilder.append(" VALUES ");
+		tempStringBuilder.append("(");
+		for(ColumnMetadata column : columns) {
+			tempStringBuilder.append('?').append(",");
+		}
+		tempStringBuilder.delete(tempStringBuilder.length()-1, tempStringBuilder.length());
+		tempStringBuilder.append(")");
+		replacementMap.put("INSERT_SQL", tempStringBuilder.toString());
+		
+		// Construct the binding parameter list
+		tempStringBuilder = new StringBuilder();
+		for(ColumnMetadata column : columns) {
+			tempStringBuilder.append("obj.").append(column.getName()).append(", ");
+		}
+		tempStringBuilder.delete(tempStringBuilder.length()-2, tempStringBuilder.length());
+		replacementMap.put("INSERT_BINDING_PARAM", tempStringBuilder.toString());
+		
+		// Construct the _construct function content
+		tempStringBuilder = new StringBuilder();
+		for(ColumnMetadata column : columns) {
+			DataType type = column.getType();
+			tempStringBuilder.append("\t\tobj.").append(column.getName()).append(" = ");
+			tempStringBuilder.append(rowReadingMapping.get(type.getName()));
+			tempStringBuilder.append("(\"").append(column.getName()).append("\"");
+			String name = StringsBuildUtil.getShortJavaName(type.asJavaClass());
+			if (name.equals("Set") || name.equals("List")) {
+				List<DataType> typeArguments = type.getTypeArguments();
+				tempStringBuilder.append(", ")//
+					.append(StringsBuildUtil.getShortJavaName(typeArguments.get(0).asJavaClass()))//
+					.append(".class");
+			} else if (name.equals("Map")) {
+				List<DataType> typeArguments = type.getTypeArguments();
+				tempStringBuilder.append(", ")//
+					.append(StringsBuildUtil.getShortJavaName(//
+							typeArguments.get(0).asJavaClass()))//
+					.append(".class");
+				tempStringBuilder.append(", ")//
+					.append(StringsBuildUtil.getShortJavaName(//
+							typeArguments.get(1).asJavaClass()))//
+					.append(".class");
+			}
+			tempStringBuilder.append(");\r\n");
+		}
+		replacementMap.put("_CONSTRUCT_RESULT", tempStringBuilder.toString());
+		
+		
+		InputStream templateStream = CassandraDAOBuilder.class.getClassLoader()
+		.getResourceAsStream("template");
+		
+		final StringBuilder fileStringBuilder = new StringBuilder();
 		FileUtil.iterateStreamByLine(templateStream, new FileUtil.FileLineProcess() {
 			@Override
 			public boolean process(String line) {
-				sb.append(line).append("\r\n");
+				fileStringBuilder.append(line).append("\r\n");
 				return true;
 			}
 		});
-		String fileStr = sb.toString();
+		String fileStr = fileStringBuilder.toString();
 		for (String replaceKey : replacementMap.keySet()) {
 			String replacement = replacementMap.get(replaceKey);
 			fileStr = fileStr.replaceAll(String.format("%%\\{%s\\}%%", replaceKey),

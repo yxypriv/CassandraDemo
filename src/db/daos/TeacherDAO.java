@@ -35,9 +35,7 @@ public class TeacherDAO {
 	}
 
 	public void createTable() {
-		String sql = String
-				.format("CREATE TABLE %s.teacher (id bigint PRIMARY KEY,name text, title text,courses list<bigint>)",
-						keyspaceName);
+		String sql = String.format("%{CREATE_SQL}%", keyspaceName);
 		CassandraConnection conn = pool.getConnection();
 		try {
 			conn.execute(sql);
