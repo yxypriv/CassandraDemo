@@ -13,24 +13,24 @@ import com.datastax.driver.core.Row;
 
 import db.models.Teacher;
 
-public class TeacherDAO {
+public class CopyOfTeacherDAO {
 	static ConnectionPool pool = ConnectionPool.getInstance();
-	static TeacherDAO instance = null;
+	static CopyOfTeacherDAO instance = null;
 
-	public static TeacherDAO getInstance() {
+	public static CopyOfTeacherDAO getInstance() {
 		if (null == instance) {
-			instance = new TeacherDAO("demo");
+			instance = new CopyOfTeacherDAO("demo");
 		}
 		return instance;
 	}
 
-	public static TeacherDAO getNewInstance(String keyspaceName) {
-		return new TeacherDAO(keyspaceName);
+	public static CopyOfTeacherDAO getNewInstance(String keyspaceName) {
+		return new CopyOfTeacherDAO(keyspaceName);
 	}
 
 	private final String keyspaceName;
 
-	private TeacherDAO(String keyspaceName) {
+	private CopyOfTeacherDAO(String keyspaceName) {
 		this.keyspaceName = keyspaceName;
 	}
 
@@ -113,7 +113,8 @@ public class TeacherDAO {
 		obj.courses = row.getList("courses", Long.class);
 		return obj;
 	}
-
+	
+	
 	public static void main(String[] args) {
 		ConnectionPool.getInstance().close();
 	}

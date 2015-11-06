@@ -1,7 +1,6 @@
-package db.daos;
+package %{PACKAGE}%;
 
-import java.util.ArrayList;
-import java.util.List;
+%{IMPORTS}%
 
 import utils.connectionPool.CassandraConnection;
 import utils.connectionPool.ConnectionPool;
@@ -11,26 +10,26 @@ import com.datastax.driver.core.PreparedStatement;
 import com.datastax.driver.core.ResultSet;
 import com.datastax.driver.core.Row;
 
-import db.models.Teacher;
+import %{MODEL_PACKAGE}%.%{MODEL_NAME}%;
 
-public class TeacherDAO {
+public class %{MODEL_NAME}%DAO {
 	static ConnectionPool pool = ConnectionPool.getInstance();
-	static TeacherDAO instance = null;
+	static %{MODEL_NAME}%DAO instance = null;
 
-	public static TeacherDAO getInstance() {
+	public static %{MODEL_NAME}%DAO getInstance() {
 		if (null == instance) {
-			instance = new TeacherDAO("demo");
+			instance = new %{MODEL_NAME}%DAO("demo");
 		}
 		return instance;
 	}
 
-	public static TeacherDAO getNewInstance(String keyspaceName) {
-		return new TeacherDAO(keyspaceName);
+	public static %{MODEL_NAME}%DAO getNewInstance(String keyspaceName) {
+		return new %{MODEL_NAME}%DAO(keyspaceName);
 	}
 
 	private final String keyspaceName;
 
-	private TeacherDAO(String keyspaceName) {
+	private %{MODEL_NAME}%DAO(String keyspaceName) {
 		this.keyspaceName = keyspaceName;
 	}
 
@@ -57,7 +56,7 @@ public class TeacherDAO {
 		}
 	}
 
-	public void insert(Teacher obj) {
+	public void insert(%{MODEL_NAME}% obj) {
 		String sql = String
 				.format("INSERT INTO %s.teacher(id,name,title,courses) VALUES (?,?,?,?)",
 						keyspaceName);
@@ -72,11 +71,11 @@ public class TeacherDAO {
 		}
 	}
 
-	public List<Teacher> selectAll() {
+	public List<%{MODEL_NAME}%> selectAll() {
 		String sql = String.format("SELECT * FROM %s.teacher", keyspaceName);
 		System.out.println(sql);
 		CassandraConnection conn = pool.getConnection();
-		List<Teacher> result = new ArrayList<Teacher>();
+		List<%{MODEL_NAME}%> result = new ArrayList<%{MODEL_NAME}%>();
 		try {
 			ResultSet rs = conn.execute(sql);
 			for (Row row : rs) {
@@ -88,11 +87,11 @@ public class TeacherDAO {
 		return result;
 	}
 
-	public Teacher selectById(long id) {
+	public %{MODEL_NAME}% selectById(long id) {
 		String sql = String.format("SELECT * FROM %s.teacher WHERE id = ?", keyspaceName);
 		System.out.println(sql);
 		CassandraConnection conn = pool.getConnection();
-		Teacher result = null;
+		%{MODEL_NAME}% result = null;
 		try {
 			PreparedStatement ps = conn.prepare(sql);
 			BoundStatement bs = ps.bind(id);
@@ -105,8 +104,8 @@ public class TeacherDAO {
 		return result;
 	}
 
-	private static Teacher _constructResult(Row row) {
-		Teacher obj = new Teacher();
+	private static %{MODEL_NAME}% _constructResult(Row row) {
+		%{MODEL_NAME}% obj = new %{MODEL_NAME}%();
 		obj.id = row.getLong("id");
 		obj.name = row.getString("name");
 		obj.title = row.getString("title");
