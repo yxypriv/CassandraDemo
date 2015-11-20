@@ -64,6 +64,64 @@ public class %{MODEL_NAME}%DAO {
 			conn.close();
 		}
 	}
+	
+	public <T> void setAddByID(long id, String fieldName, T content) {
+		Set<T> target = new HashSet<T>();
+		target.add(content);
+		String sql = String.format("UPDATE %s.%{TABLE_NAME}% SET %s = %s + ? WHERE id = ?",
+				keyspaceName, fieldName, fieldName);
+		CassandraConnection conn = pool.getConnection();
+		try {
+			PreparedStatement ps = conn.prepare(sql);
+			BoundStatement bs = ps.bind(target, (int) id);
+			conn.execute(bs);
+		} finally {
+			conn.close();
+		}
+	}
+
+	public <T> void setAddByID(long id, String fieldName, Collection<T> content) {
+		Set<T> target = new HashSet<T>(content);
+		String sql = String.format("UPDATE %s.%{TABLE_NAME}% SET %s = %s + ? WHERE id = ?",
+				keyspaceName, fieldName, fieldName);
+		CassandraConnection conn = pool.getConnection();
+		try {
+			PreparedStatement ps = conn.prepare(sql);
+			BoundStatement bs = ps.bind(target, (int) id);
+			conn.execute(bs);
+		} finally {
+			conn.close();
+		}
+	}
+	
+	public <T> void setRemoveByID(long id, String fieldName, T content) {
+		Set<T> target = new HashSet<T>();
+		target.add(content);
+		String sql = String.format("UPDATE %s.%{TABLE_NAME}% SET %s = %s - ? WHERE id = ?",
+				keyspaceName, fieldName, fieldName);
+		CassandraConnection conn = pool.getConnection();
+		try {
+			PreparedStatement ps = conn.prepare(sql);
+			BoundStatement bs = ps.bind(target, (int) id);
+			conn.execute(bs);
+		} finally {
+			conn.close();
+		}
+	}
+
+	public <T> void setRemoveByID(long id, String fieldName, Collection<T> content) {
+		Set<T> target = new HashSet<T>(content);
+		String sql = String.format("UPDATE %s.%{TABLE_NAME}% SET %s = %s - ? WHERE id = ?",
+				keyspaceName, fieldName, fieldName);
+		CassandraConnection conn = pool.getConnection();
+		try {
+			PreparedStatement ps = conn.prepare(sql);
+			BoundStatement bs = ps.bind(target, (int) id);
+			conn.execute(bs);
+		} finally {
+			conn.close();
+		}
+	}
 
 	public List<%{MODEL_NAME}%> selectAll() {
 		String sql = String.format("SELECT * FROM %s.%{TABLE_NAME}%", keyspaceName);

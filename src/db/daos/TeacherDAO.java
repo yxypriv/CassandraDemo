@@ -1,7 +1,11 @@
 package db.daos;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+
 
 import utils.connectionPool.CassandraConnection;
 import utils.connectionPool.ConnectionPool;
@@ -35,7 +39,7 @@ public class TeacherDAO {
 	}
 
 	public void createTable() {
-		String sql = String.format("%{CREATE_SQL}%", keyspaceName);
+		String sql = String.format("CREATE TABLE %s.teacher (id bigint,courses list<bigint>,name text,title text,PRIMARY KEY (id)) WITH read_repair_chance = 0.0 AND dclocal_read_repair_chance = 0.1 AND gc_grace_seconds = 864000 AND bloom_filter_fp_chance = 0.01 AND caching = { 'keys' : 'ALL', 'rows_per_partition' : 'NONE' } AND comment = '' AND compaction = { 'class' : 'org.apache.cassandra.db.compaction.SizeTieredCompactionStrategy' } AND compression = { 'sstable_compression' : 'org.apache.cassandra.io.compress.LZ4Compressor' } AND default_time_to_live = 0 AND speculative_retry = '99.0PERCENTILE' AND min_index_interval = 128 AND max_index_interval = 2048;", keyspaceName);
 		CassandraConnection conn = pool.getConnection();
 		try {
 			conn.execute(sql);
@@ -46,7 +50,6 @@ public class TeacherDAO {
 
 	public void dropTable() {
 		String sql = String.format("DROP TABLE %s.teacher", keyspaceName);
-		System.out.println(sql);
 		CassandraConnection conn = pool.getConnection();
 		try {
 			conn.execute(sql);
@@ -56,14 +59,69 @@ public class TeacherDAO {
 	}
 
 	public void insert(Teacher obj) {
-		String sql = String
-				.format("INSERT INTO %s.teacher(id,name,title,courses) VALUES (?,?,?,?)",
-						keyspaceName);
-		System.out.println(sql);
+		String sql = String.format("INSERT INTO %s.teacher (id, courses, name, title) VALUES (?,?,?,?)", keyspaceName);
 		CassandraConnection conn = pool.getConnection();
 		try {
 			PreparedStatement ps = conn.prepare(sql);
-			BoundStatement bs = ps.bind(obj.id, obj.name, obj.title, obj.courses);
+			BoundStatement bs = ps.bind(obj.id, obj.courses, obj.name, obj.title);
+			conn.execute(bs);
+		} finally {
+			conn.close();
+		}
+	}
+	
+	public <T> void setAddByID(long id, String fieldName, T content) {
+		Set<T> target = new HashSet<T>();
+		target.add(content);
+		String sql = String.format("UPDATE %s.teacher SET %s = %s + ? WHERE id = ?",
+				keyspaceName, fieldName, fieldName);
+		CassandraConnection conn = pool.getConnection();
+		try {
+			PreparedStatement ps = conn.prepare(sql);
+			BoundStatement bs = ps.bind(target, (int) id);
+			conn.execute(bs);
+		} finally {
+			conn.close();
+		}
+	}
+
+	public <T> void setAddByID(long id, String fieldName, Collection<T> content) {
+		Set<T> target = new HashSet<T>(content);
+		String sql = String.format("UPDATE %s.teacher SET %s = %s + ? WHERE id = ?",
+				keyspaceName, fieldName, fieldName);
+		CassandraConnection conn = pool.getConnection();
+		try {
+			PreparedStatement ps = conn.prepare(sql);
+			BoundStatement bs = ps.bind(target, (int) id);
+			conn.execute(bs);
+		} finally {
+			conn.close();
+		}
+	}
+	
+	public <T> void setRemoveByID(long id, String fieldName, T content) {
+		Set<T> target = new HashSet<T>();
+		target.add(content);
+		String sql = String.format("UPDATE %s.teacher SET %s = %s - ? WHERE id = ?",
+				keyspaceName, fieldName, fieldName);
+		CassandraConnection conn = pool.getConnection();
+		try {
+			PreparedStatement ps = conn.prepare(sql);
+			BoundStatement bs = ps.bind(target, (int) id);
+			conn.execute(bs);
+		} finally {
+			conn.close();
+		}
+	}
+
+	public <T> void setRemoveByID(long id, String fieldName, Collection<T> content) {
+		Set<T> target = new HashSet<T>(content);
+		String sql = String.format("UPDATE %s.teacher SET %s = %s - ? WHERE id = ?",
+				keyspaceName, fieldName, fieldName);
+		CassandraConnection conn = pool.getConnection();
+		try {
+			PreparedStatement ps = conn.prepare(sql);
+			BoundStatement bs = ps.bind(target, (int) id);
 			conn.execute(bs);
 		} finally {
 			conn.close();
@@ -72,7 +130,6 @@ public class TeacherDAO {
 
 	public List<Teacher> selectAll() {
 		String sql = String.format("SELECT * FROM %s.teacher", keyspaceName);
-		System.out.println(sql);
 		CassandraConnection conn = pool.getConnection();
 		List<Teacher> result = new ArrayList<Teacher>();
 		try {
@@ -88,7 +145,6 @@ public class TeacherDAO {
 
 	public Teacher selectById(long id) {
 		String sql = String.format("SELECT * FROM %s.teacher WHERE id = ?", keyspaceName);
-		System.out.println(sql);
 		CassandraConnection conn = pool.getConnection();
 		Teacher result = null;
 		try {
@@ -106,13 +162,10 @@ public class TeacherDAO {
 	private static Teacher _constructResult(Row row) {
 		Teacher obj = new Teacher();
 		obj.id = row.getLong("id");
+		obj.courses = row.getList("courses", Long.class);
 		obj.name = row.getString("name");
 		obj.title = row.getString("title");
-		obj.courses = row.getList("courses", Long.class);
-		return obj;
-	}
 
-	public static void main(String[] args) {
-		ConnectionPool.getInstance().close();
+		return obj;
 	}
 }

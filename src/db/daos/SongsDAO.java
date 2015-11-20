@@ -1,7 +1,10 @@
 package db.daos;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 
 import utils.connectionPool.CassandraConnection;
@@ -47,7 +50,6 @@ public class SongsDAO {
 
 	public void dropTable() {
 		String sql = String.format("DROP TABLE %s.songs", keyspaceName);
-		System.out.println(sql);
 		CassandraConnection conn = pool.getConnection();
 		try {
 			conn.execute(sql);
@@ -58,7 +60,6 @@ public class SongsDAO {
 
 	public void insert(Songs obj) {
 		String sql = String.format("INSERT INTO %s.songs (id, album, artist, data, tags, title) VALUES (?,?,?,?,?,?)", keyspaceName);
-		System.out.println(sql);
 		CassandraConnection conn = pool.getConnection();
 		try {
 			PreparedStatement ps = conn.prepare(sql);
@@ -68,10 +69,67 @@ public class SongsDAO {
 			conn.close();
 		}
 	}
+	
+	public <T> void setAddByID(long id, String fieldName, T content) {
+		Set<T> target = new HashSet<T>();
+		target.add(content);
+		String sql = String.format("UPDATE %s.songs SET %s = %s + ? WHERE id = ?",
+				keyspaceName, fieldName, fieldName);
+		CassandraConnection conn = pool.getConnection();
+		try {
+			PreparedStatement ps = conn.prepare(sql);
+			BoundStatement bs = ps.bind(target, (int) id);
+			conn.execute(bs);
+		} finally {
+			conn.close();
+		}
+	}
+
+	public <T> void setAddByID(long id, String fieldName, Collection<T> content) {
+		Set<T> target = new HashSet<T>(content);
+		String sql = String.format("UPDATE %s.songs SET %s = %s + ? WHERE id = ?",
+				keyspaceName, fieldName, fieldName);
+		CassandraConnection conn = pool.getConnection();
+		try {
+			PreparedStatement ps = conn.prepare(sql);
+			BoundStatement bs = ps.bind(target, (int) id);
+			conn.execute(bs);
+		} finally {
+			conn.close();
+		}
+	}
+	
+	public <T> void setRemoveByID(long id, String fieldName, T content) {
+		Set<T> target = new HashSet<T>();
+		target.add(content);
+		String sql = String.format("UPDATE %s.songs SET %s = %s - ? WHERE id = ?",
+				keyspaceName, fieldName, fieldName);
+		CassandraConnection conn = pool.getConnection();
+		try {
+			PreparedStatement ps = conn.prepare(sql);
+			BoundStatement bs = ps.bind(target, (int) id);
+			conn.execute(bs);
+		} finally {
+			conn.close();
+		}
+	}
+
+	public <T> void setRemoveByID(long id, String fieldName, Collection<T> content) {
+		Set<T> target = new HashSet<T>(content);
+		String sql = String.format("UPDATE %s.songs SET %s = %s - ? WHERE id = ?",
+				keyspaceName, fieldName, fieldName);
+		CassandraConnection conn = pool.getConnection();
+		try {
+			PreparedStatement ps = conn.prepare(sql);
+			BoundStatement bs = ps.bind(target, (int) id);
+			conn.execute(bs);
+		} finally {
+			conn.close();
+		}
+	}
 
 	public List<Songs> selectAll() {
 		String sql = String.format("SELECT * FROM %s.songs", keyspaceName);
-		System.out.println(sql);
 		CassandraConnection conn = pool.getConnection();
 		List<Songs> result = new ArrayList<Songs>();
 		try {
@@ -87,7 +145,6 @@ public class SongsDAO {
 
 	public Songs selectById(long id) {
 		String sql = String.format("SELECT * FROM %s.songs WHERE id = ?", keyspaceName);
-		System.out.println(sql);
 		CassandraConnection conn = pool.getConnection();
 		Songs result = null;
 		try {
@@ -101,19 +158,6 @@ public class SongsDAO {
 		}
 		return result;
 	}
-	
-	public <T> void addToSetByID(long id, String fieldName, T object) {
-		String sql = String.format("UPDATE %s.songs SET %s = %s + {?} WHERE id = ?", keyspaceName, fieldName, fieldName);
-		System.out.println(sql);
-		CassandraConnection conn = pool.getConnection();
-		try {
-			PreparedStatement ps = conn.prepare(sql);
-			BoundStatement bs = ps.bind(object, id);
-			conn.execute(bs);
-		} finally {
-			conn.close();
-		}
-	}
 
 	private static Songs _constructResult(Row row) {
 		Songs obj = new Songs();
@@ -125,11 +169,5 @@ public class SongsDAO {
 		obj.title = row.getString("title");
 
 		return obj;
-	}
-
-	public static void main(String[] args) {
-		
-	
-		ConnectionPool.getInstance().close();
 	}
 }

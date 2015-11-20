@@ -22,7 +22,7 @@ import db.daos.CassandraDAO;
 
 public class CassandraDAOBuilder {
 	String keyspace = "demo";
-	String[] tableNames = { "songs" };
+	String[] tableNames = { "songs", "teacher" };
 	String daoPathStr = "db/daos";
 	String daoPackageStr = "db.daos";
 	String modelPathStr = "db/models";
@@ -63,8 +63,11 @@ public class CassandraDAOBuilder {
 		rowReadingMapping.put(DataType.Name.TUPLE, "row.getTupleValue");
 		rowReadingMapping.put(DataType.Name.CUSTOM, "row.getBytes");
 		
-		daoExistingImportSet.add("java.util.List");
 		daoExistingImportSet.add("java.util.ArrayList");
+		daoExistingImportSet.add("java.util.Collection");
+		daoExistingImportSet.add("java.util.HashSet");
+		daoExistingImportSet.add("java.util.List");
+		daoExistingImportSet.add("java.util.Set");
 	}
 
 	public static void main(String[] args) {

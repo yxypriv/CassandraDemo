@@ -1,5 +1,6 @@
 package db;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import db.daos.SongsDAO;
@@ -21,7 +22,11 @@ public class TestMain {
 			sb.append("}");
 			System.out.println(sb.toString());
 		}
-		dao.addToSetByID(1, "tags", "tag5");
+		System.out.println("--------------------------------------");
+		List<String> content = new ArrayList<String>();
+		content.add("at1");
+		content.add("at2");
+		dao.setRemoveByID(1, "tags", content);
 		selectAll = dao.selectAll();
 		for(Songs s : selectAll) {
 			StringBuilder sb = new StringBuilder();
